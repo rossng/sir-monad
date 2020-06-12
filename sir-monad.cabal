@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 266c232d8e21086450c108663b816c42a7dfddd7c4a578e5f0754ec7a29030ef
+-- hash: a5d36526779b6b619226aad05f314cfa07537ee593ee76b1ed745f0fdd416d22
 
 name:           sir-monad
 version:        0.1.0.0
@@ -27,6 +27,7 @@ source-repository head
 
 library
   exposed-modules:
+      DataParser
       Lib
   other-modules:
       Paths_sir_monad
@@ -34,6 +35,9 @@ library
       src
   build-depends:
       base >=4.7 && <5
+    , megaparsec
+    , monad-bayes
+    , text
   default-language: Haskell2010
 
 executable sir-monad-exe
@@ -45,6 +49,7 @@ executable sir-monad-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , monad-bayes
     , sir-monad
   default-language: Haskell2010
 
@@ -58,5 +63,7 @@ test-suite sir-monad-test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , hspec
+    , megaparsec
     , sir-monad
   default-language: Haskell2010

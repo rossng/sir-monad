@@ -24,6 +24,10 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+    - monad-bayes
+    - megaparsec
+    - text
 
 executables:
   sir-monad-exe:
@@ -35,6 +39,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - sir-monad
+    - monad-bayes
 
 tests:
   sir-monad-test:
@@ -46,3 +51,5 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - sir-monad
+    - hspec
+    - megaparsec
