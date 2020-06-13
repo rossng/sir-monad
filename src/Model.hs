@@ -91,8 +91,10 @@ simulateEpidemic initialState params nsteps =
 -- | Execute a single simulation of an epidemic
 generateSingleEpidemic :: LatentState -> Params -> Int -> IO Infections
 generateSingleEpidemic initialState params nsteps =
-    sampleIOfixed $ simulateEpidemic initialState params nsteps
+    sampleIO $ simulateEpidemic initialState params nsteps
 
+params :: Params
+params = Params 0.9 2.0 0.6 763 1
 
-
-
+state :: LatentState
+state = LatentState 762 1 0
