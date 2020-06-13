@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a5d36526779b6b619226aad05f314cfa07537ee593ee76b1ed745f0fdd416d22
+-- hash: 942f69a0a11fa806edae7f6dbe38261cf4b94f09afdcf3f71e1ec964b4f447f1
 
 name:           sir-monad
 version:        0.1.0.0
@@ -29,6 +29,7 @@ library
   exposed-modules:
       DataParser
       Lib
+      Utils
   other-modules:
       Paths_sir_monad
   hs-source-dirs:
