@@ -3,6 +3,8 @@
 module Charting
     ( module Charting
     , VL.toHtmlFile
+    , VL.fromVL
+    , Data.Aeson.Encode.Pretty.encodePretty
     )
 where
 
@@ -70,20 +72,20 @@ plotEpidemics epidemics = VL.toVegaLite
 
 plotDensity :: [Double] -> VL.VegaLite
 plotDensity samples = VL.toVegaLite 
-        [background, data', transform [], encoding [], plot, width, height]
+        [background, data', encoding [], plot, width, height, transform []]
     where
         background = VL.background "rgba(255, 255, 255, 1.0)"
         data' = samplesToData samples
-        transform = VL.transform . VL.density "Value" []
+        transform = VL.transform . VL.density "value" [ VL.DnBandwidth 0.3 ]
         encoding = VL.encoding
-            . VL.position VL.X [VL.PName "Value", VL.PmType VL.Quantitative]
+            . VL.position VL.X [VL.PName "value", VL.PmType VL.Quantitative]
             . VL.position VL.Y [VL.PName "density", VL.PmType VL.Quantitative]
-        plot = VL.mark VL.Area []
+        plot = VL.mark VL.Area [VL.MOpacity 0.7, VL.MFill "teal"]
         width      = VL.width 600
         height     = VL.height 600
 
 sampleToRow :: Double -> Fields
-sampleToRow sample = [("Value", VL.Number sample)]
+sampleToRow sample = [("value", VL.Number sample)]
 
 samplesToRows = map sampleToRow
 

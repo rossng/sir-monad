@@ -114,3 +114,6 @@ state = LatentState 762 1 0
     -- score observation at time using lambda
     -- store x in the monad state
     -- repeat
+
+generateSamples :: [Double]
+generateSamples = sampleSTfixed $ replicateM 1000 (normal 3 1)
