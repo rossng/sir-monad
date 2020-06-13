@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1f76cc26ca74818cc27ddd95a721704a7869e82e78cffa6612a492dcc60d5c5c
+-- hash: d533556ce0a138f354a362fb3474fb7286a7e852b400a64da8fefa891c628cd5
 
 name:           sir-monad
 version:        0.1.0.0
@@ -29,7 +29,8 @@ library
   exposed-modules:
       Charting
       DataParser
-      Lib
+      Model
+      Statistics
       Utils
   other-modules:
       Paths_sir_monad
@@ -38,6 +39,7 @@ library
   build-depends:
       aeson-pretty
     , base >=4.7 && <5
+    , bytestring
     , hvega
     , log-domain
     , megaparsec

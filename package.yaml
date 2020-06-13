@@ -33,6 +33,7 @@ library:
     - log-domain
     - aeson-pretty
     - statistics
+    - bytestring
 
 executables:
   sir-monad-exe:

@@ -3,24 +3,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Lib where
+module Model where
 
 import           Control.Monad.Bayes.Class
 import           Control.Monad.Bayes.Sampler
-import           DataParser
 import           Control.Monad
-import           Utils
 import           Control.Monad.State
 
-someFunc :: IO ()
-someFunc = putStrLn "someFunc"
-
+import           DataParser
+import           Statistics
+import           Utils
 
 data Params = Params {
     rho :: Double, -- ^ Rate of detection
     beta :: Double, -- ^ Mean contact rate between susceptible and infected people
     gamma :: Double, -- ^ Mean recovery rate
-    numPop :: Int,
+    numPop :: Int, -- ^ Number of people
     timeSlices :: Int -- ^ 1/dt
 }
 
@@ -36,14 +34,7 @@ observation model: Poisson rho * I
 
 type InfectionCount = Int
 
-boolToInt :: Bool -> Int
-boolToInt True  = 1
-boolToInt False = 0
-
-binomial :: MonadSample m => Int -> Double -> m Int
-binomial n p = sum <$> replicateM n (boolToInt <$> bernoulli p)
-
-
+-- | Model for how we observe the number of infected people
 observationModel :: MonadSample m => Params -> LatentState -> m InfectionCount
 observationModel (Params rho _ _ _ _) (LatentState _ inf _) =
     poisson (rho * fromIntegral inf)
@@ -76,39 +67,31 @@ transitionModel :: MonadSample m => Params -> LatentState -> m LatentState
 transitionModel params =
     repeatFunction (timeSlices params) (transitionModelSingleStep params)
 
--- simulateStep :: MonadSample m => Params -> LatentState -> m (LatentState, InfectionCount)
--- simulateStep params state = do 
---     state' <- transitionModel params state
---     infectionCount <- observationModel params state'
---     return (state', infectionCount)
-
--- simulateEpidemic :: MonadSample m => LatentState -> Params -> Int -> m Infections
--- simulateEpidemic initialState params nsteps = undefined
-
 -- | Simulate a single step, returning the new latent state and appending the observed infection count to the state.
-simulateStep'
+simulateStep
     :: (MonadSample m, MonadState [InfectionCount] m)
     => Params
     -> LatentState
     -> m LatentState
-simulateStep' params latent = do
+simulateStep params latent = do
     latent'        <- transitionModel params latent
     infectionCount <- observationModel params latent'
     modify (++ [infectionCount])
     return latent'
 
-simulateEpidemic'
+-- | Simulate nsteps steps of an epidemic with the specified initial state and parameters
+simulateEpidemic
     :: MonadSample m => LatentState -> Params -> Int -> m Infections
-simulateEpidemic' initialState params nsteps =
+simulateEpidemic initialState params nsteps =
     Infections
         <$> execStateT
-                (repeatFunction nsteps (simulateStep' params) initialState)
+                (repeatFunction nsteps (simulateStep params) initialState)
                 []
 
-
+-- | Execute a single simulation of an epidemic
 generateSingleEpidemic :: LatentState -> Params -> Int -> IO Infections
 generateSingleEpidemic initialState params nsteps =
-    sampleIOfixed $ simulateEpidemic' initialState params nsteps
+    sampleIOfixed $ simulateEpidemic initialState params nsteps
 
 
 
