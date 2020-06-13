@@ -55,7 +55,7 @@ plotEpidemics :: [Epidemic] -> VL.VegaLite
 plotEpidemics epidemics = VL.toVegaLite
     [background, data', encoding [], plot, width, height]
   where
-    plot = VL.mark VL.Circle [VL.MTooltip VL.TTEncoding]
+    plot = VL.mark VL.Line [VL.MTooltip VL.TTEncoding, VL.MInterpolate VL.Monotone]
     encoding =
         VL.encoding
             . VL.position VL.X [VL.PName "Day", VL.PmType VL.Temporal]
@@ -63,7 +63,7 @@ plotEpidemics epidemics = VL.toVegaLite
                   VL.Y
                   [VL.PName "NumInfected", VL.PmType VL.Quantitative]
             . VL.color [ VL.MName "Simulation", VL.MmType VL.Nominal, VL.MLegend [] ]
-    background = VL.background "rgba(0, 0, 0, 0.05)"
+    background = VL.background "rgba(255, 255, 255, 1.0)"
     width      = VL.width 600
     height     = VL.height 600
     data'      = epidemicsToData epidemics
