@@ -29,6 +29,10 @@ library:
     - megaparsec
     - text
     - mtl
+    - hvega
+    - log-domain
+    - aeson-pretty
+    - statistics
 
 executables:
   sir-monad-exe:
