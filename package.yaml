@@ -28,6 +28,7 @@ library:
     - monad-bayes
     - megaparsec
     - text
+    - mtl
 
 executables:
   sir-monad-exe:

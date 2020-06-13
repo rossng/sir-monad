@@ -1,12 +1,16 @@
-module Lib
-    ( someFunc
-    )
-where
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
+
+module Lib where
 
 import           Control.Monad.Bayes.Class
+import           Control.Monad.Bayes.Sampler
 import           DataParser
 import           Control.Monad
 import           Utils
+import           Control.Monad.State
 
 someFunc :: IO ()
 someFunc = putStrLn "someFunc"
@@ -72,5 +76,38 @@ transitionModel :: MonadSample m => Params -> LatentState -> m LatentState
 transitionModel params =
     repeatFunction (timeSlices params) (transitionModelSingleStep params)
 
-simulateEpidemic :: MonadSample m => Params -> Int -> m Infections
-simulateEpidemic params nsteps = undefined
+-- simulateStep :: MonadSample m => Params -> LatentState -> m (LatentState, InfectionCount)
+-- simulateStep params state = do 
+--     state' <- transitionModel params state
+--     infectionCount <- observationModel params state'
+--     return (state', infectionCount)
+
+-- simulateEpidemic :: MonadSample m => LatentState -> Params -> Int -> m Infections
+-- simulateEpidemic initialState params nsteps = undefined
+
+-- | Simulate a single step, returning the new latent state and appending the observed infection count to the state.
+simulateStep'
+    :: (MonadSample m, MonadState [InfectionCount] m)
+    => Params
+    -> LatentState
+    -> m LatentState
+simulateStep' params latent = do
+    latent'        <- transitionModel params latent
+    infectionCount <- observationModel params latent'
+    modify (++ [infectionCount])
+    return latent'
+
+simulateEpidemic'
+    :: MonadSample m => LatentState -> Params -> Int -> m Infections
+simulateEpidemic' initialState params nsteps =
+    Infections
+        <$> execStateT
+                (repeatFunction nsteps (simulateStep' params) initialState)
+                []
+
+
+generateSingleEpidemic :: LatentState -> Params -> Int -> IO Infections
+generateSingleEpidemic initialState params nsteps =
+    sampleIOfixed $ simulateEpidemic' initialState params nsteps
+
+
