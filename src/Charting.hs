@@ -68,3 +68,24 @@ plotEpidemics epidemics = VL.toVegaLite
     height     = VL.height 600
     data'      = epidemicsToData epidemics
 
+plotDensity :: [Double] -> VL.VegaLite
+plotDensity samples = VL.toVegaLite 
+        [background, data', transform [], encoding [], plot, width, height]
+    where
+        background = VL.background "rgba(255, 255, 255, 1.0)"
+        data' = samplesToData samples
+        transform = VL.transform . VL.density "Value" []
+        encoding = VL.encoding
+            . VL.position VL.X [VL.PName "Value", VL.PmType VL.Quantitative]
+            . VL.position VL.Y [VL.PName "density", VL.PmType VL.Quantitative]
+        plot = VL.mark VL.Area []
+        width      = VL.width 600
+        height     = VL.height 600
+
+sampleToRow :: Double -> Fields
+sampleToRow sample = [("Value", VL.Number sample)]
+
+samplesToRows = map sampleToRow
+
+samplesToData :: [Double] -> VL.Data
+samplesToData = rowsToData . samplesToRows

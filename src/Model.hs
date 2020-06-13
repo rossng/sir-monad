@@ -101,3 +101,16 @@ params = Params 0.9 2.0 0.6 763 1
 
 state :: LatentState
 state = LatentState 762 1 0
+
+
+--scoreEpidemicToDatum :: MonadSample m  => Int ->  Params -> LatentState -> m Int 
+
+
+--scoreEpidemicToData :: (MonadSample m, MonadState [InfectionCount] m => Epidemic ->  Params -> LatentState -> m Epidemic 
+--scoreEpidemicToData data params initialState = do
+--    let obs lambda y = score (poissonPdf lambda y)
+    -- simulate a new x from old x (x is a latent state)
+    -- calculate new lambda
+    -- score observation at time using lambda
+    -- store x in the monad state
+    -- repeat

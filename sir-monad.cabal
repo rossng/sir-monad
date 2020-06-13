@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d533556ce0a138f354a362fb3474fb7286a7e852b400a64da8fefa891c628cd5
+-- hash: eed4d0e8aae34e4a1b3374d9621f3aba349f70545dafde5637862084dd84c2c5
 
 name:           sir-monad
 version:        0.1.0.0
@@ -30,6 +30,7 @@ library
       Charting
       DataParser
       Model
+      PMMHTest
       Statistics
       Utils
   other-modules:
