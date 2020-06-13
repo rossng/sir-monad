@@ -11,7 +11,8 @@ import qualified Text.Megaparsec.Char.Lexer    as L
 
 type Parser = Parsec Void Text
 
-newtype Infections = Infections [Int] deriving (Show, Eq)
+newtype Epidemic = Epidemic [InfectionCount] deriving (Show, Eq)
+type InfectionCount = Int
 
 sc :: Parser ()
 sc = L.space space1 empty empty
@@ -25,5 +26,5 @@ symbol = L.symbol sc
 integer :: Parser Int
 integer = lexeme L.decimal
 
-dataParser :: Parser Infections
-dataParser = Infections <$> sepEndBy integer (symbol ",") <* eof
+epidemicParser :: Parser Epidemic
+epidemicParser = Epidemic <$> sepEndBy integer (symbol ",") <* eof

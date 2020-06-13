@@ -32,7 +32,6 @@ data LatentState = LatentState {
 observation model: Poisson rho * I
 -}
 
-type InfectionCount = Int
 
 -- | Model for how we observe the number of infected people
 observationModel :: MonadSample m => Params -> LatentState -> m InfectionCount
@@ -81,17 +80,21 @@ simulateStep params latent = do
 
 -- | Simulate nsteps steps of an epidemic with the specified initial state and parameters
 simulateEpidemic
-    :: MonadSample m => LatentState -> Params -> Int -> m Infections
+    :: MonadSample m => LatentState -> Params -> Int -> m Epidemic
 simulateEpidemic initialState params nsteps =
-    Infections
+    Epidemic
         <$> execStateT
                 (repeatFunction nsteps (simulateStep params) initialState)
                 []
 
 -- | Execute a single simulation of an epidemic
-generateSingleEpidemic :: LatentState -> Params -> Int -> IO Infections
+generateSingleEpidemic :: LatentState -> Params -> Int -> IO Epidemic
 generateSingleEpidemic initialState params nsteps =
     sampleIO $ simulateEpidemic initialState params nsteps
+
+
+generateEpidemics :: LatentState -> Params -> Int -> Int -> IO [Epidemic]
+generateEpidemics initialState params nsteps nepidemics = replicateM nepidemics (generateSingleEpidemic initialState params nsteps)
 
 params :: Params
 params = Params 0.9 2.0 0.6 763 1
