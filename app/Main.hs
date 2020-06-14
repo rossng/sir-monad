@@ -4,6 +4,7 @@ import System.Environment
 
 import Model
 import Charting
+import System.Environment
 
 main :: IO ()
 main = do

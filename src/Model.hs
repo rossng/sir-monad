@@ -117,20 +117,25 @@ initialState :: LatentState
 initialState = LatentState 762 1 0
 
 
-scoreEpidemicToDatum :: (MonadSample m, MonadCond m)  => FixedParams -> Params -> LatentState -> Int ->  m LatentState 
-scoreEpidemicToDatum fixedParams params x datum = do
+scoreEpidemicToDatum 
+    :: MonadInfer m  
+    => FixedParams 
+    -> Epidemic 
+    -> LatentState 
+    -> Params 
+    ->  m Params 
+scoreEpidemicToDatum fixedParams dat  x params = do
     let obs lambda y = score (poissonPdf lambda y)
-    x' <- transitionModel fixedParams params x 
-    obs ((fromIntegral $ inf x') * (rho params)) datum
-    return x'
+        go [] x = return x
+        go (y:ys) x = do
+            x' <- transitionModel fixedParams params x 
+            obs ((fromIntegral $ inf x') * (rho params)) y
+            return x'
+    go (unwrapEpidemic dat) x
+    return params
 
 unwrapEpidemic :: Epidemic -> [Int]
 unwrapEpidemic (Epidemic xs) = xs
-
-scoreEpidemicToData :: MonadInfer m => FixedParams -> Epidemic ->  LatentState -> Params -> m Params 
-scoreEpidemicToData fixedParams ys initialState params  = do
-    foldM_ (scoreEpidemicToDatum fixedParams params) initialState (unwrapEpidemic ys)
-    return params
 
 {-
 ddprior <- function(params) {
@@ -151,7 +156,7 @@ testInferenceEpidemic nsteps nparticles = do
     ys <- parseFromFile epidemicParser "data/datafile"
     case ys of (Left _) -> error "naughty"
                (Right dat) -> sampleIO $ do
-                       pmmhRes <- prior $ pmmh nsteps 14 nparticles paramsPrior (scoreEpidemicToData fixedParams dat initialState)
+                       pmmhRes <- prior $ pmmh nsteps 14 nparticles paramsPrior (scoreEpidemicToDatum fixedParams dat initialState)
                        return pmmhRes
 
 parseFromFile p file = runParser p file <$> TIO.readFile file
