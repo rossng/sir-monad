@@ -3,6 +3,8 @@
 module Charting
     ( module Charting
     , VL.toHtmlFile
+    , VL.fromVL
+    , Data.Aeson.Encode.Pretty.encodePretty
     )
 where
 
@@ -51,6 +53,8 @@ epidemicToData = rowsToData . epidemicToRows . epidemicToDays
 epidemicsToData :: [Epidemic] -> VL.Data
 epidemicsToData = rowsToData . concatSimulations . map epidemicToRows . map epidemicToDays
 
+-- | Plots the density/histogram of a set of values
+-- >>> unsafePerformIO $ toHtmlFile "test.html" <$> (plotEpidemics <$> (generateEpidemics state params 100 5))
 plotEpidemics :: [Epidemic] -> VL.VegaLite
 plotEpidemics epidemics = VL.toVegaLite
     [background, data', encoding [], plot, width, height]
@@ -68,24 +72,44 @@ plotEpidemics epidemics = VL.toVegaLite
     height     = VL.height 600
     data'      = epidemicsToData epidemics
 
+-- | Plots the density/histogram of a set of values
+-- >>> toHtmlFile "test.html" $ plotDensity generateSamples
 plotDensity :: [Double] -> VL.VegaLite
 plotDensity samples = VL.toVegaLite 
-        [background, data', transform [], encoding [], plot, width, height]
+        [background, data', encoding [], plot, width, height, transform []]
     where
         background = VL.background "rgba(255, 255, 255, 1.0)"
         data' = samplesToData samples
-        transform = VL.transform . VL.density "Value" []
+        transform = VL.transform . VL.density "value" [ VL.DnBandwidth 0.3 ]
         encoding = VL.encoding
-            . VL.position VL.X [VL.PName "Value", VL.PmType VL.Quantitative]
+            . VL.position VL.X [VL.PName "value", VL.PmType VL.Quantitative]
             . VL.position VL.Y [VL.PName "density", VL.PmType VL.Quantitative]
-        plot = VL.mark VL.Area []
+        plot = VL.mark VL.Area [VL.MOpacity 0.7, VL.MFill "teal"]
+        width      = VL.width 600
+        height     = VL.height 600
+
+-- | Plots a trace of values over time
+-- >>> toHtmlFile "test.html" $ plotTrace generateSamples
+plotTrace :: [Double] -> VL.VegaLite
+plotTrace samples = VL.toVegaLite
+    [background, data', encoding [], plot, width, height]
+    where
+        background = VL.background "rgba(255, 255, 255, 1.0)"
+        data' = samplesToData samples
+        encoding = VL.encoding
+            . VL.position VL.X [VL.PName "step", VL.PmType VL.Quantitative]
+            . VL.position VL.Y [VL.PName "value", VL.PmType VL.Quantitative]
+        plot = VL.mark VL.Line [VL.MInterpolate VL.StepAfter]
         width      = VL.width 600
         height     = VL.height 600
 
 sampleToRow :: Double -> Fields
-sampleToRow sample = [("Value", VL.Number sample)]
+sampleToRow sample = [("value", VL.Number sample)]
 
 samplesToRows = map sampleToRow
 
 samplesToData :: [Double] -> VL.Data
-samplesToData = rowsToData . samplesToRows
+samplesToData = rowsToData . addIncrementingStep . samplesToRows
+
+addIncrementingStep :: Rows -> Rows
+addIncrementingStep = map (\(i, row) -> ("step", VL.Number $ fromIntegral i) : row) . zip [1..]
