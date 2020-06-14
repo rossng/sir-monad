@@ -151,11 +151,11 @@ testInferenceEpidemic nsteps nparticles = do
     ys <- parseFromFile epidemicParser "data/datafile"
     case ys of (Left _) -> error "naughty"
                (Right dat) -> sampleIO $ do
-                       pmmhRes <- prior $ pmmh nsteps 1 nparticles paramsPrior (scoreEpidemicToData fixedParams dat initialState)
+                       pmmhRes <- prior $ pmmh nsteps 14 nparticles paramsPrior (scoreEpidemicToData fixedParams dat initialState)
                        return pmmhRes
 
 parseFromFile p file = runParser p file <$> TIO.readFile file
 
 
---extractParams :: (Params -> Double) -> [[(Params, Numeric.Log.Log Double)]] -> [Double]
---extractParams projec = 
+extractParams :: (Params -> Double) -> [[(Params, Numeric.Log.Log Double)]] -> [Double]
+extractParams project samples = (project . fst . head) <$> samples
