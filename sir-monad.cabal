@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eed4d0e8aae34e4a1b3374d9621f3aba349f70545dafde5637862084dd84c2c5
+-- hash: d5dcbf47d47dc27a88adaf4c72a679ad13fc6242eca8aac65ba220d8cd7e9f37
 
 name:           sir-monad
 version:        0.1.0.0
@@ -46,6 +46,7 @@ library
     , megaparsec
     , monad-bayes
     , mtl
+    , parsec
     , statistics
     , text
   default-language: Haskell2010

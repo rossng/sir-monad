@@ -2,24 +2,34 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Model where
 
 import           Control.Monad.Bayes.Class
 import           Control.Monad.Bayes.Sampler
+import qualified Data.Text.IO as TIO
 import           Control.Monad
+import           Control.Monad.Bayes.Inference.PMMH
 import           Control.Monad.State
+import Control.Monad.Bayes.Weighted
+import           Numeric.Log
+import           Text.Megaparsec 
 
 import           DataParser
 import           Statistics
 import           Utils
 
+
 data Params = Params {
     rho :: Double, -- ^ Rate of detection
     beta :: Double, -- ^ Mean contact rate between susceptible and infected people
-    gamma :: Double, -- ^ Mean recovery rate
-    numPop :: Int, -- ^ Number of people
-    timeSlices :: Int -- ^ 1/dt
+    gamma :: Double -- ^ Mean recovery rate
+} deriving Show
+
+data FixedParams = FixedParams {
+    numPop :: Int,
+    timeSlices :: Int
 }
 
 data LatentState = LatentState {
@@ -35,7 +45,7 @@ observation model: Poisson rho * I
 
 -- | Model for how we observe the number of infected people
 observationModel :: MonadSample m => Params -> LatentState -> m InfectionCount
-observationModel (Params rho _ _ _ _) (LatentState _ inf _) =
+observationModel (Params rho _ _) (LatentState _ inf _) =
     poisson (rho * fromIntegral inf)
 
 
@@ -44,8 +54,8 @@ dN_SI <-
 -}
 -- | Transition the model a single time slice
 transitionModelSingleStep
-    :: MonadSample m => Params -> LatentState -> m LatentState
-transitionModelSingleStep (Params rho beta gamma numPop timeSlices) (LatentState sus inf recov)
+    :: MonadSample m => FixedParams -> Params -> LatentState -> m LatentState
+transitionModelSingleStep (FixedParams numPop timeSlices) (Params rho beta gamma) (LatentState sus inf recov)
     = do
         let dt = 1 / fromIntegral timeSlices
         dN_SI <- binomial
@@ -62,55 +72,90 @@ transitionModelSingleStep (Params rho beta gamma numPop timeSlices) (LatentState
         return (LatentState sus' inf' recov')
 
 -- | Transition the model for a full step
-transitionModel :: MonadSample m => Params -> LatentState -> m LatentState
-transitionModel params =
-    repeatFunction (timeSlices params) (transitionModelSingleStep params)
+transitionModel :: MonadSample m => FixedParams -> Params -> LatentState -> m LatentState
+transitionModel fixedParams params =
+    transitionModelSingleStep fixedParams params
 
 -- | Simulate a single step, returning the new latent state and appending the observed infection count to the state.
 simulateStep
     :: (MonadSample m, MonadState [InfectionCount] m)
-    => Params
+    => FixedParams
+    -> Params
     -> LatentState
     -> m LatentState
-simulateStep params latent = do
-    latent'        <- transitionModel params latent
+simulateStep fixedParams params latent = do
+    latent'        <- transitionModel fixedParams params latent
     infectionCount <- observationModel params latent'
     modify (++ [infectionCount])
     return latent'
 
 -- | Simulate nsteps steps of an epidemic with the specified initial state and parameters
 simulateEpidemic
-    :: MonadSample m => LatentState -> Params -> Int -> m Epidemic
-simulateEpidemic initialState params nsteps =
+    :: MonadSample m => LatentState -> FixedParams -> Params -> Int -> m Epidemic
+simulateEpidemic initialState fixedParams params nsteps =
     Epidemic
         <$> execStateT
-                (repeatFunction nsteps (simulateStep params) initialState)
+                (repeatFunction nsteps (simulateStep fixedParams params) initialState)
                 []
 
 -- | Execute a single simulation of an epidemic
-generateSingleEpidemic :: LatentState -> Params -> Int -> IO Epidemic
-generateSingleEpidemic initialState params nsteps =
-    sampleIO $ simulateEpidemic initialState params nsteps
+generateSingleEpidemic :: LatentState -> FixedParams -> Params -> Int -> IO Epidemic
+generateSingleEpidemic initialState fixedParams params nsteps =
+    sampleIO $ simulateEpidemic initialState fixedParams params nsteps
 
 
-generateEpidemics :: LatentState -> Params -> Int -> Int -> IO [Epidemic]
-generateEpidemics initialState params nsteps nepidemics = replicateM nepidemics (generateSingleEpidemic initialState params nsteps)
+generateEpidemics :: LatentState -> FixedParams -> Params -> Int -> Int -> IO [Epidemic]
+generateEpidemics initialState fixedParams params nsteps nepidemics = replicateM nepidemics (generateSingleEpidemic initialState fixedParams params nsteps)
+
+fixedParams :: FixedParams
+fixedParams = FixedParams 763 1  
 
 params :: Params
-params = Params 0.9 2.0 0.6 763 1
+params = Params 0.9 2.0 0.6 
 
-state :: LatentState
-state = LatentState 762 1 0
-
-
---scoreEpidemicToDatum :: MonadSample m  => Int ->  Params -> LatentState -> m Int 
+initialState :: LatentState
+initialState = LatentState 762 1 0
 
 
---scoreEpidemicToData :: (MonadSample m, MonadState [InfectionCount] m => Epidemic ->  Params -> LatentState -> m Epidemic 
---scoreEpidemicToData data params initialState = do
---    let obs lambda y = score (poissonPdf lambda y)
-    -- simulate a new x from old x (x is a latent state)
-    -- calculate new lambda
-    -- score observation at time using lambda
-    -- store x in the monad state
-    -- repeat
+scoreEpidemicToDatum :: (MonadSample m, MonadCond m)  => FixedParams -> Params -> LatentState -> Int ->  m LatentState 
+scoreEpidemicToDatum fixedParams params x datum = do
+    let obs lambda y = score (poissonPdf lambda y)
+    x' <- transitionModel fixedParams params x 
+    obs ((fromIntegral $ inf x') * (rho params)) datum
+    return x'
+
+unwrapEpidemic :: Epidemic -> [Int]
+unwrapEpidemic (Epidemic xs) = xs
+
+scoreEpidemicToData :: MonadInfer m => FixedParams -> Epidemic ->  LatentState -> Params -> m Params 
+scoreEpidemicToData fixedParams ys initialState params  = do
+    foldM_ (scoreEpidemicToDatum fixedParams params) initialState (unwrapEpidemic ys)
+    return params
+
+{-
+ddprior <- function(params) {
+    dgamma(params[[1]], 0.3, 10, log = TRUE) +
+    dgamma(params[[3]], 1, 8, log=TRUE) + 
+    dbeta(params[[2]], 2,7, log=TRUE)
+}
+-}
+paramsPrior :: MonadSample m => m Params
+paramsPrior = do
+    pBeta <- Control.Monad.Bayes.Class.gamma 2 1
+    pRho <- Control.Monad.Bayes.Class.beta 2.0 7.0
+    pGamma <- Control.Monad.Bayes.Class.gamma 1.0  (1 / 8.0)
+    return (Params pRho pBeta pGamma )
+
+testInferenceEpidemic :: Int -> Int -> IO [[(Params, Numeric.Log.Log Double)]]
+testInferenceEpidemic nsteps nparticles = do
+    ys <- parseFromFile epidemicParser "data/datafile"
+    case ys of (Left _) -> error "naughty"
+               (Right dat) -> sampleIO $ do
+                       pmmhRes <- prior $ pmmh nsteps 1 nparticles paramsPrior (scoreEpidemicToData fixedParams dat initialState)
+                       return pmmhRes
+
+parseFromFile p file = runParser p file <$> TIO.readFile file
+
+
+--extractParams :: (Params -> Double) -> [[(Params, Numeric.Log.Log Double)]] -> [Double]
+--extractParams projec = 
