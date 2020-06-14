@@ -53,6 +53,8 @@ epidemicToData = rowsToData . epidemicToRows . epidemicToDays
 epidemicsToData :: [Epidemic] -> VL.Data
 epidemicsToData = rowsToData . concatSimulations . map epidemicToRows . map epidemicToDays
 
+-- | Plots the density/histogram of a set of values
+-- >>> unsafePerformIO $ toHtmlFile "test.html" <$> (plotEpidemics <$> (generateEpidemics state params 100 5))
 plotEpidemics :: [Epidemic] -> VL.VegaLite
 plotEpidemics epidemics = VL.toVegaLite
     [background, data', encoding [], plot, width, height]
@@ -70,6 +72,8 @@ plotEpidemics epidemics = VL.toVegaLite
     height     = VL.height 600
     data'      = epidemicsToData epidemics
 
+-- | Plots the density/histogram of a set of values
+-- >>> toHtmlFile "test.html" $ plotDensity generateSamples
 plotDensity :: [Double] -> VL.VegaLite
 plotDensity samples = VL.toVegaLite 
         [background, data', encoding [], plot, width, height, transform []]
@@ -84,6 +88,8 @@ plotDensity samples = VL.toVegaLite
         width      = VL.width 600
         height     = VL.height 600
 
+-- | Plots a trace of values over time
+-- >>> toHtmlFile "test.html" $ plotTrace generateSamples
 plotTrace :: [Double] -> VL.VegaLite
 plotTrace samples = VL.toVegaLite
     [background, data', encoding [], plot, width, height]
