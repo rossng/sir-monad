@@ -16,4 +16,7 @@ main = do
     toHtmlFile "beta.html" $ plotTrace bP
     toHtmlFile "rho.html" $ plotTrace rP
     toHtmlFile "gamma.html" $ plotTrace gP
+    toHtmlFile "dBeta.html"  $ plotDensity bP
+    toHtmlFile "dRho.html"   $ plotDensity rP
+    toHtmlFile "dGamma.html" $ plotDensity gP
     return ()
