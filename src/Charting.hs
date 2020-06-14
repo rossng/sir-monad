@@ -84,10 +84,26 @@ plotDensity samples = VL.toVegaLite
         width      = VL.width 600
         height     = VL.height 600
 
+plotTrace :: [Double] -> VL.VegaLite
+plotTrace samples = VL.toVegaLite
+    [background, data', encoding [], plot, width, height]
+    where
+        background = VL.background "rgba(255, 255, 255, 1.0)"
+        data' = samplesToData samples
+        encoding = VL.encoding
+            . VL.position VL.X [VL.PName "step", VL.PmType VL.Quantitative]
+            . VL.position VL.Y [VL.PName "value", VL.PmType VL.Quantitative]
+        plot = VL.mark VL.Tick [VL.MOrient VL.Horizontal, VL.MWidth 5]
+        width      = VL.width 600
+        height     = VL.height 600
+
 sampleToRow :: Double -> Fields
 sampleToRow sample = [("value", VL.Number sample)]
 
 samplesToRows = map sampleToRow
 
 samplesToData :: [Double] -> VL.Data
-samplesToData = rowsToData . samplesToRows
+samplesToData = rowsToData . addIncrementingStep . samplesToRows
+
+addIncrementingStep :: Rows -> Rows
+addIncrementingStep = map (\(i, row) -> ("step", VL.Number $ fromIntegral i) : row) . zip [1..]
