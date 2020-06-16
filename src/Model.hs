@@ -64,7 +64,7 @@ transitionModelSingleStep (FixedParams numPop timeSlices) (Params rho beta gamma
             )
         dN_IR <- binomial
             inf
-            (1 - exp ((-beta * dt * (fromIntegral inf)) / (fromIntegral numPop))
+            (1 - exp (-gamma * dt)
             )
         let sus'   = sus - dN_SI
         let inf'   = inf + dN_SI - dN_IR
@@ -131,7 +131,7 @@ scoreEpidemicToDatum fixedParams dat  x params = do
             x' <- transitionModel fixedParams params x 
             obs ((fromIntegral $ inf x') * (rho params)) y
             return x'
-    go (unwrapEpidemic dat) x
+    (go $! (unwrapEpidemic dat)) $! x
     return params
 
 unwrapEpidemic :: Epidemic -> [Int]
