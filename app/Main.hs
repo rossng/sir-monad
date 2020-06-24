@@ -10,9 +10,9 @@ main :: IO ()
 main = do
     args <- getArgs
     x <- testInferenceEpidemic (read $ args !! 0) (read $ args !! 1)
-    let bP = extractParams beta x 
-    let rP = extractParams rho x 
-    let gP = extractParams gamma x 
+    let bP = beta <$> x
+    let rP = rho <$> x
+    let gP = gamma <$> x
     toHtmlFile "beta.html" $ plotTrace bP
     toHtmlFile "rho.html" $ plotTrace rP
     toHtmlFile "gamma.html" $ plotTrace gP

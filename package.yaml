@@ -47,6 +47,29 @@ executables:
     dependencies:
     - sir-monad
     - monad-bayes
+  simulate-exe:
+    main:                SecondMain.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is SecondMain
+    dependencies:
+    - sir-monad
+    - monad-bayes
+  smc-exe:
+    main:                ThirdMain.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    - -main-is ThirdMain
+    dependencies:
+    - sir-monad
+    - monad-bayes
+
 
 tests:
   sir-monad-test:

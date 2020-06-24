@@ -12,9 +12,12 @@ import qualified Data.Text.IO as TIO
 import           Control.Monad
 import           Control.Monad.Bayes.Inference.PMMH
 import           Control.Monad.State
+import Control.Monad.Bayes.Population
+import Control.Monad.Bayes.Inference.SMC
 import Control.Monad.Bayes.Weighted
 import           Numeric.Log
-import           Text.Megaparsec 
+import           Text.Megaparsec
+import PMC
 
 import           DataParser
 import           Statistics
@@ -36,7 +39,7 @@ data LatentState = LatentState {
     sus :: Int, -- ^ Number of people susceptible to infection
     inf :: Int, -- ^ Number of people currently infected
     recov :: Int -- ^ Number of people recovered from infection
-}
+} deriving Show
 
 {-
 observation model: Poisson rho * I
@@ -116,22 +119,37 @@ params = Params 0.9 2.0 0.6
 initialState :: LatentState
 initialState = LatentState 762 1 0
 
+scoreEpidemicToDatum'
+    :: MonadInfer m
+    => FixedParams
+    -> Epidemic
+    -> LatentState
+    -> Params
+    -> m LatentState
+scoreEpidemicToDatum' fixedParams dat  x params = do
+    let obs lambda y = score (poissonPdf lambda y)
+        go [] x = return (head x)
+        go (y:ys) xs = do
+            x' <- transitionModel fixedParams params (head xs)
+            obs ((fromIntegral $ inf x') * (rho params)) y
+            (go ys (x' : xs))
+    (go (unwrapEpidemic dat)) [x]
 
-scoreEpidemicToDatum 
-    :: MonadInfer m  
-    => FixedParams 
-    -> Epidemic 
-    -> LatentState 
-    -> Params 
-    ->  m Params 
+scoreEpidemicToDatum
+    :: MonadInfer m
+    => FixedParams
+    -> Epidemic
+    -> LatentState
+    -> Params
+    ->  m Params
 scoreEpidemicToDatum fixedParams dat  x params = do
     let obs lambda y = score (poissonPdf lambda y)
         go [] x = return x
         go (y:ys) x = do
-            x' <- transitionModel fixedParams params x 
+            x' <- transitionModel fixedParams params x
             obs ((fromIntegral $ inf x') * (rho params)) y
-            return x'
-    (go $! (unwrapEpidemic dat)) $! x
+            go ys x'
+    (go (unwrapEpidemic dat)) x
     return params
 
 unwrapEpidemic :: Epidemic -> [Int]
@@ -146,23 +164,39 @@ ddprior <- function(params) {
 -}
 paramsPrior :: MonadSample m => m Params
 paramsPrior = do
-    pBeta <- Control.Monad.Bayes.Class.gamma 2 1
-    pRho <- Control.Monad.Bayes.Class.beta 2.0 7.0
-    pGamma <- Control.Monad.Bayes.Class.gamma 1.0  (1 / 8.0)
+    pBeta <- Control.Monad.Bayes.Class.gamma 2 3
+    pRho <- Control.Monad.Bayes.Class.beta 2.0 2.0
+    pGamma <- Control.Monad.Bayes.Class.gamma 2.0 0.8
     return (Params pRho pBeta pGamma )
 
-testInferenceEpidemic :: Int -> Int -> IO [[(Params, Numeric.Log.Log Double)]]
+
 testInferenceEpidemic nsteps nparticles = do
     ys <- parseFromFile epidemicParser "data/datafile"
     case ys of (Left _) -> error "naughty"
                (Right dat) -> sampleIO $ do
                        pmmhRes <- prior $ pmmh nsteps 14 nparticles paramsPrior (scoreEpidemicToDatum fixedParams dat initialState)
-                       return pmmhRes
+                       let (posterior, _) = unzip $ head <$> pmmhRes
+                       return posterior
 
 parseFromFile p file = runParser p file <$> TIO.readFile file
 
+smcInferenceEpidemic' :: Int -> IO (Log Double)
+smcInferenceEpidemic'  k = do
+    ys <- parseFromFile epidemicParser "data/datafile"
+    case ys of (Left _) -> error "naughty"
+               (Right dat) -> sampleIO $ do
+                                t <- evidence $ smcSystematic 14 k ((return $ Params 2 2 2) >>= (scoreEpidemicToDatum fixedParams dat initialState))
+                                return t
 
-extractParams :: (Params -> Double) -> [[(Params, Numeric.Log.Log Double)]] -> [Double]
+
+smcInferenceEpidemic :: Int -> IO ()
+smcInferenceEpidemic  k = do
+    ys <- parseFromFile epidemicParser "data/datafile"
+    case ys of (Left _) -> error "naughty"
+               (Right dat) -> sampleIO $ do
+                                t <- evidence $ smcSystematic 14 k (paramsPrior >>= (scoreEpidemicToDatum' fixedParams dat initialState))
+                                liftIO $ print $ t
+
 extractParams project samples = (project . fst . head) <$> samples
 
 --scoreEpidemicToData :: (MonadSample m, MonadState [InfectionCount] m => Epidemic ->  Params -> LatentState -> m Epidemic 
@@ -176,3 +210,7 @@ extractParams project samples = (project . fst . head) <$> samples
 
 generateSamples :: [Double]
 generateSamples = sampleSTfixed $ replicateM 1000 (normal 3 1)
+
+
+
+
